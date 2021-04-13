@@ -195,7 +195,7 @@ input:
 
 
 
-line: END                                 {$$="\n";end=1;}
+line: END                                 {$$="\n ";end=1;}
 
 | tab                                     { $$ = $1;  }
 
@@ -213,14 +213,14 @@ line: END                                 {$$="\n";end=1;}
 
 | tab function_call                       { $$ = myStrCat( strdup($2),";"); }
 
-| tab RETURN type                         {if( strcmp(  getType($3),"ERROR")!=0){currentFType=getType($3);}      char* ret=myStrCat("return ",strdup($3));$$=myStrCat(ret,";"); returnFlag=1;}
+| tab RETURN type                         {if( strcmp(  getType($3),"String")!=0){currentFType=getType($3);}      char* ret=myStrCat("return ",strdup($3));$$=myStrCat(ret,";"); returnFlag=1;}
 
 ;
 
 
 
 tab:                                                                      
-| TAB tab                                   {tab++; $$="\t";}
+| TAB tab                                   {tab++; $$=" ";}
 ;
 
 declaration: ID ASSIGN STRING               {$$ = decl(strdup($1), S ,strdup($3),currentScope ); }
@@ -232,6 +232,8 @@ declaration: ID ASSIGN STRING               {$$ = decl(strdup($1), S ,strdup($3)
 | ID ASSIGN function_call                   {$$ = decl(strdup($1),getType(getFName($3)),strdup($3),currentScope);}
 
 | ID ASSIGN ID                              {$$ = decl(strdup($1),getType(getFName($3)),strdup($3),currentScope);}
+
+| ID ASSIGN list                            {$$ = decl(strdup($1),currentFType,strdup($3),currentScope);}
 ;
 
 selection: IF LP condition RP COLON         { $$ = build_if(strdup($3));  }
@@ -251,19 +253,19 @@ IOoperation: ID ASSIGN INPUT LP RP          {$$ = decl(strdup($1), S ,"tastiera.
 | PRINT LP txt RP                           {$$ = build_out(strdup($3));}
 ;
 
-list: ID ASSIGN LS RS                       {$$= newList(strdup($1)); }
-| ID APPEND LP type RP                      {$$= appendList (strdup($1),strdup($4)  );  }
-| ID CLEAR LP RP                            {$$=clList ( strdup($1)   );  }
-| ID COUNT LP RP                            {$$= countList ( strdup($1)  );  }
-| ID EXTEND LP type RP                      {$$= extendList ( strdup($1),strdup($4) ); }
-| ID INDEX LP type RP                       {$$= indexList ( strdup($1),strdup($4)  );  }
-| ID INSERT LP type type RP                 {$$=  insertList( strdup($1),strdup($4),strdup($5) ); }
-| ID POP LP RP                              {$$=  popList (strdup($1)    );  }
-| ID POP LP type RP                         {$$= popElList ( strdup($1),strdup($4)  );  }
-| ID REMOVE LP type RP                      {$$=removeList( strdup($1),strdup($4)   ); }
-| ID COPY LP RP                             {$$= copyList( strdup($1)  ); }
-| ID REVERSE LP RP                          {$$= reverseList( strdup($1)  ); }
-| ID SORT LP RP                             {$$= sortList( strdup($1)  ); }
+list: ID ASSIGN LS RS                       {$$= newList(strdup($1));                               }
+| ID APPEND LP type RP                      {$$= appendList (strdup($1),strdup($4)  );              }
+| ID CLEAR LP RP                            {$$=clList ( strdup($1)   );                            }
+| ID COUNT LP RP                            {$$= countList ( strdup($1)  );     currentFType="int" ;                      }
+| ID EXTEND LP type RP                      {$$= extendList ( strdup($1),strdup($4) );              }
+| ID INDEX LP type RP                       {$$= indexList ( strdup($1),strdup($4)  );   currentFType="int" ;         }
+| ID INSERT LP type type RP                 {$$=  insertList( strdup($1),strdup($4),strdup($5) );   }
+| ID POP LP RP                              {$$=  popList (strdup($1)    );                         }
+| ID POP LP type RP                         {$$= popElList ( strdup($1),strdup($4)  );              }
+| ID REMOVE LP type RP                      {$$=removeList( strdup($1),strdup($4)   );              }
+| ID COPY LP RP                             {$$= copyList( strdup($1)  );                           }
+| ID REVERSE LP RP                          {$$= reverseList( strdup($1)  );                        }
+| ID SORT LP RP                             {$$= sortList( strdup($1)  );                           }
 ;
 
 function_call: ID LP  RP                    {$$ = buildFCall(strdup($1)," ");}
@@ -333,19 +335,21 @@ char* buildDecoration(){
 
     if(!isEmpty()){
         
-        char buffer[BUFFER_SIZE];
+        char buffer[2048];
         *buffer=NULL;
         while(!isEmpty())
         {
             struct node* element = pop();
             char* nome = element->nome;
-            char* tipo = getType(element->nome);
+            char* tipo = getType(nome);
             
             if(Listlength()!=0){ 
-                char* tmp= buffer;
+                char* tmp= strdup(buffer);
+                
                 snprintf(buffer, sizeof(buffer), "%s %s %s , ",tmp , tipo,nome);
             }else{
-                char* tmp= buffer;
+                char* tmp= strdup(buffer);
+                
                 snprintf(buffer, sizeof(buffer), "%s %s %s ",tmp , tipo,nome);
             }
             
@@ -362,15 +366,16 @@ char* decl( char* name, char* type, char* val,int currentScope){
     char buffer[2048];
     
     if(exist(name) == 1 && getScope(name)==currentScope){
-        
+        modtype(name,type,currentScope);
         snprintf(buffer, sizeof(buffer), "%s = %s ;" , name,val);
         char* ass = buffer;
         return ass;
 
     }
     else if(exist(name) == 1 && getScope(name)!=currentScope){
+        modtype(name,type,currentScope);
+        snprintf(buffer, sizeof(buffer), "%s %s = %s ;" , type, name,val);  
         
-        snprintf(buffer, sizeof(buffer), "%s %s = %s ;" , type, name,val);   
         setScope(name,currentScope);
         char* ass = buffer;
         return ass;
@@ -464,6 +469,7 @@ void addTipo( char* var,char* tipo,int currentScope)
     if (exist(var))
     {
         modtype(var,tipo,currentScope);
+        printf("---------------------------------%s,%s",var,tipo);
     }else{
         addref(yylineno,  var, tipo,currentScope); 
     }
@@ -571,7 +577,7 @@ int main(int argc, char const *argv[]) {
     insertBuffer("import java.util.Collections;\n");
     insertBuffer("public class CLASSNAME{ \n");
     printBuffer() ;
-    //printOnF ("newprogram.java") ;
+    printOnF ("newprogram.java") ;
     clearBuffer();
 
     
@@ -592,13 +598,15 @@ int main(int argc, char const *argv[]) {
     }    
 
 
-    if(listFlag)
-    {
-        printBuffer() ;
-        clearBuffer();
-        loadPopToBuffer ();
-        loadCopyToBuffer ();
-    }
+
+
+
+    loadPopToBuffer ();
+    printBuffer() ;
+    printOnF ("newprogram.java") ;
+    clearBuffer();
+    loadCopyToBuffer ();
+    
 
     insertBuffer("}\n");
 

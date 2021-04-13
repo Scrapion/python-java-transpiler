@@ -1,0 +1,18 @@
+$javac CLASSNAME.java
+Note: CLASSNAME.java uses unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+$java -Xmx128M -Xms16M CLASSNAME
+INIZIO SCRIPT
+UNO
+DUE
+TRE
+MINORE DI 5
+PARI
+
+DISPARI
+
+PARI
+
+DISPARI
+
+PARI
