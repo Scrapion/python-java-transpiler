@@ -2,6 +2,6 @@
 
 The compile.bat file allows to recompile the entire software.
 
-To run the file simply type in command line:
+To run the transpiler simply type in command line:
 
   a.exe <filename.py>
